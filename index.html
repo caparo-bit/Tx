@@ -1,0 +1,1545 @@
+<!DOCTYPE html>
+<html lang="es">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1.0, maximum-scale=1.0, user-scalable=no">
+<title>Taxi OCR · Analítica Premium y Control de Kilómetros</title>
+<link href="https://fonts.googleapis.com/css2?family=Bebas+Neue&family=DM+Mono:wght@400;500;700&family=DM+Sans:wght@300;400;500;600;700&display=swap" rel="stylesheet">
+
+<!-- PWA -->
+<meta name="apple-mobile-web-app-capable" content="yes">
+<meta name="apple-mobile-web-app-status-bar-style" content="black-translucent">
+<meta name="apple-mobile-web-app-title" content="Taxi OCR">
+<meta name="mobile-web-app-capable" content="yes">
+<meta name="theme-color" content="#000000">
+
+<!-- Manifest PWA -->
+<link rel="manifest" href="manifest.json">
+
+<!-- Icono T azul sobre negro -->
+<link rel="icon" type="image/png" sizes="192x192" href="icon-192.png">
+<link rel="icon" type="image/png" sizes="512x512" href="icon-512.png">
+<link rel="apple-touch-icon" href="icon-192.png">
+
+<style>
+  :root {
+    --bg: #06080b;
+    --surface: #0c0e12;
+    --card: #12151b;
+    --card-hover: #181c24;
+    --border: #1e222a;
+    --border-hover: #2e3543;
+    --accent: #ffc83b;
+    --accent-glow: rgba(255, 200, 59, 0.15);
+    --accent2: #f97316;
+    --green: #10b981;
+    --green-glow: rgba(16, 185, 129, 0.15);
+    --teal: #14b8a6;
+    --indigo: #6366f1;
+    --rose: #f43f5e;
+    --text: #f3f4f6;
+    --muted: #848d9c;
+    --radius: 16px;
+    --transition: all 0.25s cubic-bezier(0.4, 0, 0.2, 1);
+  }
+
+  html { height: auto; }
+  *, *::before, *::after { box-sizing: border-box; margin: 0; padding: 0; }
+
+  body {
+    background: var(--bg);
+    color: var(--text);
+    font-family: 'DM Sans', sans-serif;
+    font-size: 14px;
+    min-height: 100vh;
+    overflow-x: hidden;
+    -webkit-overflow-scrolling: touch;
+    touch-action: pan-y;
+    padding-bottom: calc(76px + env(safe-area-inset-bottom));
+  }
+
+  header {
+    background: rgba(12, 14, 18, 0.85);
+    backdrop-filter: blur(16px);
+    -webkit-backdrop-filter: blur(16px);
+    border-bottom: 1px solid var(--border);
+    padding: 0 24px;
+    padding-top: env(safe-area-inset-top);
+    height: calc(64px + env(safe-area-inset-top));
+    display: flex;
+    align-items: center;
+    justify-content: space-between;
+    position: sticky;
+    top: 0;
+    z-index: 100;
+  }
+
+  .logo {
+    font-family: 'Bebas Neue', sans-serif;
+    font-size: 28px;
+    letter-spacing: 2px;
+    background: linear-gradient(135deg, #ffffff 0%, var(--accent) 100%);
+    -webkit-background-clip: text;
+    -webkit-text-fill-color: transparent;
+    display: flex;
+    align-items: center;
+  }
+
+  .logo span {
+    color: var(--muted);
+    font-size: 11px;
+    font-family: 'DM Mono', monospace;
+    letter-spacing: 1.5px;
+    margin-left: 12px;
+    border: 1px solid var(--border);
+    padding: 2px 8px;
+    border-radius: 6px;
+    background: rgba(0,0,0,0.3);
+    -webkit-text-fill-color: var(--muted);
+  }
+
+  .header-right { display: flex; align-items: center; gap: 12px; }
+
+  .status-badges { display: flex; align-items: center; gap: 10px; }
+
+  .ocr-badge {
+    display: flex;
+    align-items: center;
+    gap: 8px;
+    background: rgba(18, 21, 27, 0.6);
+    border: 1px solid var(--border);
+    border-radius: 30px;
+    padding: 6px 14px;
+    font-family: 'DM Mono', monospace;
+    font-size: 11px;
+    color: var(--text);
+  }
+
+  .dot {
+    width: 8px; height: 8px; border-radius: 50%;
+    background: var(--muted); position: relative;
+  }
+  .dot::after {
+    content: ''; position: absolute; inset: -2px;
+    border-radius: 50%; border: 1px solid currentColor;
+    opacity: 0; transform: scale(1.5);
+  }
+  .dot.green { background: var(--green); color: var(--green); }
+  .dot.green::after { animation: pulse-dot 2s infinite; opacity: 1; }
+  .dot.blue { background: var(--teal); color: var(--teal); }
+  .dot.blue::after { animation: pulse-dot 2s infinite; opacity: 1; }
+
+  @keyframes pulse-dot {
+    0% { transform: scale(1); opacity: 0.8; }
+    100% { transform: scale(2.2); opacity: 0; }
+  }
+
+  .nav-tabs {
+    display: flex;
+    background: var(--surface);
+    border: 1px solid var(--border);
+    border-radius: 30px;
+    padding: 4px;
+    gap: 4px;
+  }
+
+  .nav-tab-btn {
+    background: transparent;
+    border: none;
+    color: var(--muted);
+    font-family: 'DM Sans', sans-serif;
+    font-size: 13px;
+    font-weight: 600;
+    padding: 8px 18px;
+    border-radius: 20px;
+    cursor: pointer;
+    display: flex;
+    align-items: center;
+    gap: 8px;
+    transition: var(--transition);
+  }
+  .nav-tab-btn:hover { color: var(--text); background: rgba(255,255,255,0.02); }
+  .nav-tab-btn.active { color: #000; background: var(--accent); box-shadow: 0 2px 10px var(--accent-glow); }
+
+  @media(max-width: 820px) {
+    header .nav-tabs { display: none; }
+    .mobile-nav {
+      display: flex !important;
+      position: fixed;
+      bottom: 0; left: 0; right: 0;
+      background: rgba(12, 14, 18, 0.95);
+      backdrop-filter: blur(20px);
+      -webkit-backdrop-filter: blur(20px);
+      border-top: 1px solid var(--border);
+      padding: 10px 16px calc(10px + env(safe-area-inset-bottom));
+      justify-content: space-around;
+      z-index: 999;
+      box-shadow: 0 -8px 24px rgba(0,0,0,0.4);
+    }
+    .mobile-tab-btn .icon { font-size: 20px; transition: var(--transition); }
+    .mobile-tab-btn.active { color: var(--accent); }
+    .mobile-tab-btn.active .icon { transform: translateY(-2px); filter: drop-shadow(0 0 4px var(--accent-glow)); }
+  }
+
+  .mobile-nav { display: none; }
+
+  .mobile-tab-btn {
+    display: flex; flex-direction: column; align-items: center;
+    background: transparent; border: none; color: var(--muted);
+    font-family: 'DM Sans', sans-serif; font-size: 10px; font-weight: 500;
+    gap: 5px; cursor: pointer; flex: 1; transition: var(--transition);
+  }
+
+  .view-container { display: none; animation: fadeInView 0.3s cubic-bezier(0.16, 1, 0.3, 1); }
+  .view-container.active { display: block; }
+
+  @keyframes fadeInView {
+    from { opacity: 0; transform: translateY(10px); }
+    to { opacity: 1; transform: translateY(0); }
+  }
+
+  .main { max-width: 1200px; margin: 0 auto; padding: 24px; }
+  @media(max-width: 1024px){ .main { padding: 16px; } }
+
+  .card {
+    background: var(--card);
+    border: 1px solid var(--border);
+    border-radius: var(--radius);
+    box-shadow: 0 4px 24px rgba(0,0,0,0.3);
+    overflow: hidden;
+    transition: var(--transition);
+    margin-bottom: 24px;
+  }
+  .card:hover { box-shadow: 0 8px 32px rgba(0,0,0,0.45); border-color: rgba(255,255,255,0.03); }
+
+  .card-header {
+    padding: 18px 20px;
+    border-bottom: 1px solid var(--border);
+    display: flex; align-items: center; justify-content: space-between;
+    background: linear-gradient(180deg, rgba(255,255,255,0.01) 0%, rgba(255,255,255,0) 100%);
+  }
+
+  .card-title {
+    font-family: 'DM Sans', sans-serif; font-weight: 700; font-size: 15px;
+    letter-spacing: 0.5px; color: var(--text);
+    display: flex; align-items: center; gap: 8px;
+  }
+
+  .card-body { padding: 20px; }
+
+  .upload-zone {
+    border: 2px dashed var(--border);
+    border-radius: var(--radius);
+    padding: 56px 20px;
+    text-align: center;
+    cursor: pointer;
+    transition: var(--transition);
+    position: relative;
+    background: rgba(0,0,0,0.2);
+    overflow: hidden;
+  }
+  .upload-zone::before, .upload-zone::after {
+    content: ''; position: absolute;
+    width: 20px; height: 20px;
+    border-color: var(--border); border-style: solid; transition: var(--transition);
+  }
+  .upload-zone::before { top: 10px; left: 10px; border-width: 2px 0 0 2px; }
+  .upload-zone::after { bottom: 10px; right: 10px; border-width: 0 2px 2px 0; }
+  .upload-zone:hover { border-color: var(--accent); background: rgba(255,200,59,0.03); }
+  .upload-zone:hover::before, .upload-zone:hover::after { border-color: var(--accent); }
+  .upload-zone input[type=file] { position: absolute; inset: 0; opacity: 0; cursor: pointer; width: 100%; height: 100%; }
+  .upload-icon { font-size: 42px; margin-bottom: 12px; filter: drop-shadow(0 4px 8px rgba(0,0,0,0.3)); transition: transform 0.3s ease; }
+  .upload-zone:hover .upload-icon { transform: translateY(-4px) scale(1.05); }
+  .upload-label { font-size: 13px; color: var(--muted); line-height: 1.5; }
+  .upload-label strong { color: var(--accent); font-weight: 600; }
+
+  #preview-container {
+    display: none; position: relative;
+    border-radius: var(--radius); overflow: hidden;
+    background: #000; border: 1px solid var(--border);
+    box-shadow: inset 0 0 40px rgba(0,0,0,0.8);
+  }
+  #preview-canvas { width: 100%; display: block; border-radius: var(--radius); }
+  .preview-close {
+    position: absolute; top: 12px; right: 12px;
+    background: rgba(12,14,18,0.85); backdrop-filter: blur(4px);
+    border: 1px solid var(--border); color: #fff;
+    width: 36px; height: 36px; border-radius: 50%;
+    cursor: pointer; font-size: 13px;
+    display: flex; align-items: center; justify-content: center;
+    transition: var(--transition);
+  }
+  .preview-close:hover { background: var(--rose); border-color: var(--rose); transform: rotate(90deg); }
+
+  #contrast-panel {
+    display: none; flex-direction: column; gap: 14px;
+    padding: 16px; background: rgba(0,0,0,0.3);
+    border: 1px solid var(--border); border-radius: var(--radius); margin-top: 14px;
+  }
+  .contrast-row {
+    display: flex; align-items: center; justify-content: space-between;
+    gap: 12px; font-size: 13px; color: var(--text);
+  }
+  .contrast-row input[type=range] {
+    flex: 1; height: 6px; border-radius: 3px;
+    background: var(--border); outline: none;
+    -webkit-appearance: none; accent-color: var(--accent);
+  }
+  .contrast-row label { display: flex; align-items: center; gap: 10px; cursor: pointer; font-weight: 500; }
+  .contrast-row input[type=checkbox] { accent-color: var(--accent); width: 18px; height: 18px; cursor: pointer; }
+
+  .btn {
+    display: inline-flex; align-items: center; justify-content: center;
+    gap: 8px; padding: 11px 20px; border-radius: 10px; border: 1px solid transparent;
+    font-family: 'DM Sans', sans-serif; font-size: 13px; font-weight: 600;
+    cursor: pointer; transition: var(--transition);
+    user-select: none; -webkit-tap-highlight-color: transparent;
+  }
+  .btn:active { transform: scale(0.97); }
+  .btn:disabled { opacity: 0.35; cursor: not-allowed; }
+
+  .btn-yellow { background: var(--accent); color: #000; box-shadow: 0 4px 12px var(--accent-glow); }
+  .btn-yellow:hover { box-shadow: 0 6px 18px rgba(255,200,59,0.3); filter: brightness(1.05); }
+  .btn-ghost { background: rgba(255,255,255,0.02); color: var(--text); border-color: var(--border); }
+  .btn-ghost:hover { background: rgba(255,255,255,0.06); border-color: var(--border-hover); }
+  .btn-green { background: rgba(16,185,129,0.08); color: #34d399; border-color: rgba(16,185,129,0.2); }
+  .btn-green:hover { background: rgba(16,185,129,0.15); border-color: rgba(16,185,129,0.4); }
+  .btn-indigo { background: rgba(99,102,241,0.08); color: #818cf8; border-color: rgba(99,102,241,0.2); }
+  .btn-indigo:hover { background: rgba(99,102,241,0.15); border-color: rgba(99,102,241,0.4); }
+  .btn-rose { background: rgba(244,63,94,0.08); color: #fb7185; border-color: rgba(244,63,94,0.15); padding: 6px 12px; font-size: 12px; }
+  .btn-rose:hover { background: rgba(244,63,94,0.18); border-color: rgba(244,63,94,0.35); }
+  .btn-teal { background: rgba(20,184,166,0.08); color: #2dd4bf; border-color: rgba(20,184,166,0.2); }
+  .btn-teal:hover { background: rgba(20,184,166,0.15); border-color: rgba(20,184,166,0.4); }
+  .btn-blue { background: rgba(37,99,235,0.1); color: #60a5fa; border-color: rgba(37,99,235,0.25); padding: 6px 12px; font-size: 12px; }
+  .btn-blue:hover { background: rgba(37,99,235,0.2); border-color: rgba(37,99,235,0.4); }
+
+  #scan-btn { display: none; width: 100%; margin-top: 14px; padding: 14px; font-size: 14px; text-transform: uppercase; letter-spacing: 1px; font-weight: 700; }
+
+  .spin { display: inline-block; animation: spin .8s linear infinite; }
+  @keyframes spin { to { transform: rotate(360deg); } }
+
+  #ocr-progress { font-family: 'DM Mono', monospace; font-size: 12px; color: var(--accent); min-height: 18px; text-align: center; margin-top: 10px; letter-spacing: 0.3px; }
+
+  .capture-row { display: flex; gap: 10px; margin-top: 14px; }
+  .capture-row .btn { flex: 1; font-size: 13px; padding: 12px; position: relative; overflow: hidden; }
+  .capture-row .btn input[type=file] { position: absolute; inset: 0; opacity: 0; cursor: pointer; }
+
+  #ocr-form {
+    display: none; flex-direction: column; gap: 14px;
+    margin-top: 16px; padding: 18px;
+    background: rgba(0,0,0,0.4); border: 1px solid var(--border);
+    border-radius: var(--radius);
+    animation: slideDown .25s cubic-bezier(0.16, 1, 0.3, 1);
+  }
+  @keyframes slideDown {
+    from { opacity: 0; transform: translateY(-12px); }
+    to   { opacity: 1; transform: translateY(0); }
+  }
+  .form-title { font-weight: 700; font-size: 14px; text-transform: uppercase; letter-spacing: 0.5px; color: var(--accent); border-left: 3px solid var(--accent); padding-left: 8px; }
+  .form-grid { display: grid; grid-template-columns: 1fr 1fr; gap: 12px; }
+  .form-group { display: flex; flex-direction: column; gap: 6px; }
+  .form-group.full { grid-column: 1/-1; }
+  .form-group label { font-size: 10px; font-family: 'DM Mono', monospace; color: var(--muted); text-transform: uppercase; letter-spacing: 1px; font-weight: 500; }
+  .form-group input { background: rgba(0,0,0,0.3); border: 1px solid var(--border); border-radius: 8px; color: var(--text); font-family: 'DM Mono', monospace; font-size: 14px; padding: 10px 14px; width: 100%; transition: var(--transition); -webkit-appearance: none; }
+  .form-group input:focus { outline: none; border-color: var(--accent); background: rgba(255,200,59,0.02); box-shadow: 0 0 10px rgba(255,200,59,0.1); }
+  .form-actions { display: flex; gap: 10px; margin-top: 8px; }
+  .form-actions .btn { flex: 1; }
+
+  .stats-bar { display: grid; grid-template-columns: repeat(4, 1fr); gap: 16px; margin-bottom: 24px; }
+  @media(max-width: 640px){ .stats-bar { grid-template-columns: repeat(2, 1fr); gap: 12px; } }
+
+  .stat-card {
+    background: var(--card); border: 1px solid var(--border);
+    border-radius: var(--radius); padding: 18px;
+    display: flex; flex-direction: column; gap: 6px;
+    position: relative; overflow: hidden; transition: var(--transition);
+  }
+  .stat-card::before { content: ''; position: absolute; top: 0; left: 0; bottom: 0; width: 4px; background: currentColor; opacity: 0.8; }
+  .stat-label { font-size: 10px; font-family: 'DM Mono', monospace; color: var(--muted); text-transform: uppercase; letter-spacing: 1px; font-weight: 500; }
+  .stat-value { font-family: 'Bebas Neue', sans-serif; font-size: 32px; letter-spacing: 1px; line-height: 1; margin-top: 2px; }
+  .stat-meta { font-size: 11px; color: var(--muted); display: flex; align-items: center; gap: 4px; }
+  .sc-green { color: var(--green); }
+  .sc-indigo { color: var(--indigo); }
+  .sc-teal { color: var(--teal); }
+  .sc-yellow { color: var(--accent); }
+
+  /* ── Nota primer registro ── */
+  .first-record-note {
+    display: flex; align-items: center; gap: 8px;
+    background: rgba(255,200,59,0.04);
+    border: 1px solid rgba(255,200,59,0.15);
+    border-radius: 10px; padding: 10px 14px;
+    font-size: 12px; color: var(--accent);
+    font-family: 'DM Mono', monospace;
+    margin-bottom: 16px;
+  }
+
+  .analytics-card { background: var(--card); border: 1px solid var(--border); border-radius: var(--radius); padding: 20px; }
+  .analytics-header { display: flex; justify-content: space-between; align-items: center; margin-bottom: 16px; }
+  .analytics-title { font-weight: 700; font-size: 15px; display: flex; align-items: center; gap: 8px; }
+
+  .efficiency-grid { display: grid; grid-template-columns: repeat(3, 1fr); gap: 12px; margin-bottom: 20px; }
+  @media(max-width: 480px){ .efficiency-grid { grid-template-columns: 1fr; } }
+
+  .eff-box { background: rgba(0,0,0,0.2); border: 1px solid var(--border); border-radius: 12px; padding: 12px 14px; text-align: center; }
+  .eff-box .label { font-size: 10px; text-transform: uppercase; color: var(--muted); letter-spacing: 0.5px; margin-bottom: 4px; }
+  .eff-box .value { font-family: 'DM Mono', monospace; font-size: 16px; font-weight: 700; color: var(--accent); }
+
+  .chart-container { width: 100%; height: 200px; background: rgba(5,7,10,0.4); border-radius: 12px; border: 1px solid var(--border); position: relative; padding: 14px; overflow: hidden; }
+
+  .toolbar { display: flex; align-items: center; gap: 12px; margin-bottom: 16px; flex-wrap: wrap; }
+  .search-wrap { flex: 1; min-width: 220px; position: relative; }
+  .search-wrap input { width: 100%; background: rgba(0,0,0,0.25); border: 1px solid var(--border); border-radius: 10px; color: var(--text); font-family: 'DM Sans', sans-serif; font-size: 13px; padding: 10px 14px 10px 38px; transition: var(--transition); }
+  .search-wrap input:focus { outline: none; border-color: var(--accent); background: rgba(0,0,0,0.35); }
+  .search-wrap .search-icon { position: absolute; left: 14px; top: 50%; transform: translateY(-50%); color: var(--muted); font-size: 14px; pointer-events: none; }
+
+  .table-wrap { overflow-x: auto; border-radius: var(--radius); border: 1px solid var(--border); background: rgba(0,0,0,0.2); -webkit-overflow-scrolling: touch; }
+  table { width: 100%; border-collapse: collapse; font-size: 13px; }
+
+  thead th { background: rgba(12,14,18,0.7); padding: 14px 12px; text-align: left; font-family: 'DM Mono', monospace; font-size: 11px; text-transform: uppercase; letter-spacing: 0.8px; color: var(--muted); border-bottom: 1px solid var(--border); white-space: nowrap; }
+  thead th.sortable { cursor: pointer; user-select: none; transition: var(--transition); }
+  thead th.sortable:hover { color: var(--text); background: rgba(255,255,255,0.04); }
+  .sort-indicator { font-size: 10px; margin-left: 4px; display: inline-block; vertical-align: middle; transition: var(--transition); }
+
+  tbody tr { border-bottom: 1px solid var(--border); transition: var(--transition); }
+  tbody tr:last-child { border-bottom: none; }
+  tbody tr:hover { background: rgba(255,255,255,0.015); }
+  tbody td { padding: 12px; vertical-align: middle; }
+
+  /* Fila del primer registro (baseline) */
+  tbody tr.is-baseline { background: rgba(255,200,59,0.025); }
+  tbody tr.is-baseline td:first-child::after { content: ' 📌'; font-size: 10px; opacity: 0.6; }
+
+  .cell-input { background: transparent; border: 1px solid transparent; border-radius: 6px; color: var(--text); font-family: 'DM Mono', monospace; font-size: 13px; padding: 6px 8px; width: 100%; min-width: 90px; transition: var(--transition); }
+  .cell-input:hover { background: rgba(255,255,255,0.02); border-color: var(--border); }
+  .cell-input:focus { outline: none; border-color: var(--accent); background: var(--surface); box-shadow: 0 0 8px rgba(255,200,59,0.08); }
+  input[type=date].cell-input { min-width: 135px; color-scheme: dark; }
+
+  .cell-diff { font-family: 'DM Mono', monospace; font-size: 10px; margin-top: 4px; font-weight: 500; display: inline-flex; padding: 1px 6px; border-radius: 4px; }
+  .diff-green  { color: #34d399; background: rgba(16,185,129,0.06); }
+  .diff-indigo { color: #818cf8; background: rgba(99,102,241,0.06); }
+  .diff-teal   { color: #2dd4bf; background: rgba(20,184,166,0.06); }
+  .diff-muted  { color: var(--muted); background: rgba(255,255,255,0.03); font-style: italic; }
+
+  .empty-state { padding: 60px 20px; text-align: center; }
+  .empty-title { font-family: 'DM Sans', sans-serif; font-weight: 700; font-size: 18px; color: var(--muted); margin-bottom: 6px; }
+  .empty-sub { font-size: 13px; color: var(--muted); opacity: 0.6; }
+
+  /* ── Miniatura ticket en tabla ── */
+  .ticket-thumb {
+    width: 40px; height: 50px; object-fit: cover;
+    border-radius: 5px; border: 1px solid var(--border);
+    cursor: pointer; transition: var(--transition);
+    display: block;
+  }
+  .ticket-thumb:hover { transform: scale(1.08); border-color: var(--accent); }
+  .ticket-placeholder { width: 40px; height: 50px; border-radius: 5px; border: 1px dashed var(--border); display: flex; align-items: center; justify-content: center; font-size: 18px; color: var(--border); }
+
+  /* ── Modal de ticket grande ── */
+  #ticket-modal-overlay {
+    display: none; position: fixed; inset: 0;
+    background: rgba(4,5,7,0.92); backdrop-filter: blur(12px);
+    -webkit-backdrop-filter: blur(12px); z-index: 3000;
+    align-items: center; justify-content: center; padding: 20px;
+  }
+  #ticket-modal-overlay.open { display: flex; }
+  #ticket-modal-img {
+    max-width: min(90vw, 600px); max-height: 85vh;
+    border-radius: 14px; border: 1px solid var(--border);
+    box-shadow: 0 24px 60px rgba(0,0,0,0.8);
+    animation: zoomIn 0.25s cubic-bezier(0.34, 1.56, 0.64, 1);
+  }
+  .ticket-modal-close {
+    position: fixed; top: 20px; right: 20px;
+    background: rgba(12,14,18,0.9); border: 1px solid var(--border);
+    color: #fff; width: 44px; height: 44px; border-radius: 50%;
+    cursor: pointer; font-size: 16px;
+    display: flex; align-items: center; justify-content: center;
+    transition: var(--transition); z-index: 3001;
+  }
+  .ticket-modal-close:hover { background: var(--rose); transform: rotate(90deg); }
+
+  .sheets-row { display: flex; gap: 10px; align-items: center; flex-wrap: wrap; width: 100%; }
+  .sheets-row input { flex: 1; min-width: 220px; background: rgba(0,0,0,0.2); border: 1px solid var(--border); border-radius: 10px; color: var(--text); font-family: 'DM Mono', monospace; font-size: 12px; padding: 11px 14px; width: 100%; transition: var(--transition); }
+  .sheets-row input:focus { outline: none; border-color: var(--accent); }
+  .sheets-status { display: flex; align-items: center; gap: 6px; font-family: 'DM Mono', monospace; font-size: 11px; padding: 8px 14px; border-radius: 30px; background: rgba(0,0,0,0.2); border: 1px solid var(--border); color: var(--muted); }
+  .sheets-status.ok  { color: var(--green); border-color: rgba(16,185,129,0.25); background: rgba(16,185,129,0.04); }
+  .sheets-status.err { color: var(--rose);  border-color: rgba(244,63,94,0.25);  background: rgba(244,63,94,0.04); }
+
+  .backup-bar { display: flex; gap: 10px; padding: 8px 0 2px; flex-wrap: wrap; }
+  .backup-bar .btn { flex: 1; min-width: 130px; }
+
+  #toast {
+    position: fixed; bottom: 24px; left: 50%;
+    transform: translateX(-50%) translateY(80px);
+    background: var(--card); border: 1px solid var(--border);
+    border-radius: 40px; padding: 12px 28px;
+    font-size: 13px; font-family: 'DM Sans', sans-serif; font-weight: 500;
+    display: flex; align-items: center; gap: 10px;
+    z-index: 2100; transition: transform 0.35s cubic-bezier(0.175, 0.885, 0.32, 1.275), opacity 0.3s;
+    opacity: 0; pointer-events: none; white-space: nowrap;
+    box-shadow: 0 12px 36px rgba(0,0,0,0.6);
+  }
+  #toast.show { transform: translateX(-50%) translateY(0); opacity: 1; }
+  #toast.success { border-color: rgba(16,185,129,0.4); color: #34d399; background: #0b1713; }
+  #toast.error   { border-color: rgba(244,63,94,0.4);  color: #fb7185; background: #1e0f12; }
+
+  .section-divider { display: flex; align-items: center; gap: 12px; margin: 20px 0 12px; }
+  .section-divider span { font-family: 'DM Mono', monospace; font-size: 11px; text-transform: uppercase; letter-spacing: 1.5px; color: var(--muted); white-space: nowrap; }
+  .section-divider::before, .section-divider::after { content: ''; flex: 1; height: 1px; background: var(--border); }
+
+  #custom-modal-overlay {
+    display: none; position: fixed; inset: 0;
+    background: rgba(4,5,7,0.85); backdrop-filter: blur(8px);
+    -webkit-backdrop-filter: blur(8px); z-index: 2000;
+    align-items: center; justify-content: center; padding: 20px;
+  }
+  #custom-modal { background: var(--card); border: 1px solid var(--border); border-radius: 20px; max-width: 440px; width: 100%; padding: 28px; box-shadow: 0 20px 50px rgba(0,0,0,0.6); animation: zoomIn 0.3s cubic-bezier(0.34, 1.56, 0.64, 1); }
+  @keyframes zoomIn { from { opacity: 0; transform: scale(0.92); } to { opacity: 1; transform: scale(1); } }
+  .modal-title { font-family: 'DM Sans', sans-serif; font-weight: 700; font-size: 18px; color: var(--text); margin-bottom: 10px; display: flex; align-items: center; gap: 8px; }
+  .modal-text { font-size: 13.5px; color: var(--muted); line-height: 1.6; margin-bottom: 24px; }
+  .modal-footer { display: flex; justify-content: flex-end; gap: 12px; }
+
+
+</style>
+</head>
+<body>
+
+<!-- CABECERA -->
+<header>
+  <div class="logo">TAXI OCR <span>ANALYTICS PRO</span></div>
+  <div class="nav-tabs">
+    <button class="nav-tab-btn active" onclick="switchView('scanner')" id="tab-pc-scanner">📷 Escáner</button>
+    <button class="nav-tab-btn" onclick="switchView('dashboard')" id="tab-pc-dashboard">📊 Panel</button>
+    <button class="nav-tab-btn" onclick="switchView('records')" id="tab-pc-records">📋 Registros</button>
+    <button class="nav-tab-btn" onclick="switchView('settings')" id="tab-pc-settings">⚙️ Ajustes</button>
+  </div>
+  <div class="header-right">
+    <div class="status-badges">
+      <div class="ocr-badge" id="offline-badge" style="display:none;">
+        <div class="dot blue"></div><span>Offline OK</span>
+      </div>
+      <div class="ocr-badge">
+        <div class="dot" id="ocr-dot"></div>
+        <span id="ocr-status-label">Carga OCR…</span>
+      </div>
+    </div>
+  </div>
+</header>
+
+<!-- BARRA MÓVIL INFERIOR -->
+<div class="mobile-nav">
+  <button class="mobile-tab-btn active" onclick="switchView('scanner')" id="tab-mob-scanner">
+    <span class="icon">📷</span><span>Escáner</span>
+  </button>
+  <button class="mobile-tab-btn" onclick="switchView('dashboard')" id="tab-mob-dashboard">
+    <span class="icon">📊</span><span>Panel</span>
+  </button>
+  <button class="mobile-tab-btn" onclick="switchView('records')" id="tab-mob-records">
+    <span class="icon">📋</span><span>Registros</span>
+  </button>
+  <button class="mobile-tab-btn" onclick="switchView('settings')" id="tab-mob-settings">
+    <span class="icon">⚙️</span><span>Ajustes</span>
+  </button>
+</div>
+
+<div class="main">
+
+  <!-- ── VISTA 1: ESCÁNER ── -->
+  <div id="view-scanner" class="view-container active">
+    <div class="card">
+      <div class="card-header">
+        <span class="card-title">📷 Escanear Ticket de Turno</span>
+      </div>
+      <div class="card-body">
+        <div class="upload-zone" id="upload-placeholder">
+          <input type="file" id="file-input" accept="image/*" onchange="handleFile(this)">
+          <div class="upload-icon">📸</div>
+          <div class="upload-label">
+            <strong>Selecciona una foto</strong><br>
+            o arrastra el ticket de turno aquí
+          </div>
+        </div>
+
+        <div class="capture-row">
+          <button class="btn btn-ghost" style="position:relative;overflow:hidden;">
+            📷 Usar Cámara
+            <input type="file" id="camera-input" accept="image/*" capture="environment" onchange="handleFile(this)">
+          </button>
+          <button class="btn btn-ghost" onclick="triggerFileInput()">
+            🗂️ Elegir Archivo
+          </button>
+        </div>
+
+        <div id="preview-container" style="margin-top:14px;">
+          <canvas id="preview-canvas"></canvas>
+          <button class="preview-close" onclick="clearImage()">✕</button>
+        </div>
+
+        <div id="contrast-panel">
+          <div class="contrast-row">
+            <label>
+              <input type="checkbox" id="binarize-check" onchange="reprocess()">
+              Binarizado Inteligente (Blanco y Negro)
+            </label>
+          </div>
+          <div class="contrast-row">
+            <span style="color:var(--muted)">Sensibilidad</span>
+            <input type="range" id="threshold-range" min="50" max="220" value="128" oninput="reprocess()">
+            <span id="threshold-val" style="font-family:'DM Mono';font-weight:700;">128</span>
+          </div>
+        </div>
+
+        <div id="ocr-progress"></div>
+
+        <button class="btn btn-yellow" id="scan-btn" onclick="runOCR()">
+          🔍 Procesar con OCR
+        </button>
+
+        <div id="ocr-form">
+          <div class="form-title">✏️ Verificar Datos Detectados</div>
+          <div class="form-grid">
+            <div class="form-group full">
+              <label>Vehículo / Matrícula</label>
+              <input type="text" id="f-vehicle" placeholder="Ej. 1234 ABC" list="vehicles-datalist">
+              <datalist id="vehicles-datalist"></datalist>
+            </div>
+            <div class="form-group full">
+              <label>Fecha del Turno</label>
+              <input type="date" id="f-date">
+            </div>
+            <div class="form-group">
+              <label>Servicios</label>
+              <input type="number" id="f-services" placeholder="0">
+            </div>
+            <div class="form-group">
+              <label>Carreras (€)</label>
+              <input type="number" step="0.01" id="f-carreras" placeholder="0.00">
+            </div>
+            <div class="form-group">
+              <label>Km Total</label>
+              <input type="number" step="0.1" id="f-kmtotal" placeholder="0.0">
+            </div>
+            <div class="form-group">
+              <label>Km Ocupado</label>
+              <input type="number" step="0.1" id="f-kmocupado" placeholder="0.0">
+            </div>
+          </div>
+          <div class="form-actions">
+            <button class="btn btn-yellow" onclick="confirmSave()">💾 Guardar Turno</button>
+            <button class="btn btn-ghost" onclick="closeOCRForm()">Cancelar</button>
+          </div>
+        </div>
+      </div>
+    </div>
+  </div>
+
+  <!-- ── VISTA 2: DASHBOARD ── -->
+  <div id="view-dashboard" class="view-container">
+
+    <div class="first-record-note" id="baseline-note" style="display:none;">
+      📌 El primer registro de cada vehículo es la línea base (odómetro inicial) y no se suma al rendimiento.
+    </div>
+
+    <div class="stats-bar">
+      <div class="stat-card sc-green">
+        <div class="stat-label">Servicios Netos</div>
+        <div class="stat-value" id="s-services">0</div>
+        <div class="stat-meta" id="m-services">Acumulados</div>
+      </div>
+      <div class="stat-card sc-indigo">
+        <div class="stat-label">Total Carreras</div>
+        <div class="stat-value" id="s-carreras">0.00</div>
+        <div class="stat-meta" id="m-carreras">Euros netos</div>
+      </div>
+      <div class="stat-card sc-teal">
+        <div class="stat-label">Km Totales</div>
+        <div class="stat-value" id="s-kmtotal">0.0</div>
+        <div class="stat-meta" id="m-kmtotal">Kilómetros netos</div>
+      </div>
+      <div class="stat-card sc-yellow">
+        <div class="stat-label">Km Ocupados</div>
+        <div class="stat-value" id="s-kmocupado">0.0</div>
+        <div class="stat-meta" id="m-kmocupado">Kilómetros ocupados</div>
+      </div>
+    </div>
+
+    <div class="analytics-card">
+      <div class="analytics-header">
+        <div class="analytics-title">📊 Rendimiento y Eficiencia Operativa</div>
+      </div>
+      <div class="efficiency-grid">
+        <div class="eff-box">
+          <div class="label">Ratio € / Km</div>
+          <div class="value" id="eff-ratio-euro-km">0.00 €</div>
+        </div>
+        <div class="eff-box">
+          <div class="label">Ocupación Promedio</div>
+          <div class="value" id="eff-occupancy">0.0 %</div>
+        </div>
+        <div class="eff-box">
+          <div class="label">Tarifa Media</div>
+          <div class="value" id="eff-ticket-average">0.00 €</div>
+        </div>
+      </div>
+      <div class="chart-container" id="chart-area"></div>
+    </div>
+  </div>
+
+  <!-- ── VISTA 3: REGISTROS ── -->
+  <div id="view-records" class="view-container">
+    <div class="card">
+      <div class="card-header">
+        <span class="card-title">📋 Registro de Turnos</span>
+        <button class="btn btn-ghost" style="font-size:12px;padding:8px 16px;" onclick="addManualRow()">+ Fila Manual</button>
+      </div>
+      <div class="card-body" style="padding:16px;">
+        <div class="toolbar">
+          <div class="search-wrap">
+            <span class="search-icon">🔍</span>
+            <input type="search" id="search-input" placeholder="Buscar por vehículo o fecha..." oninput="renderTable()">
+          </div>
+        </div>
+        <div class="table-wrap">
+          <table>
+            <thead>
+              <tr>
+                <th style="width:46px;">🖼</th>
+                <th class="sortable" onclick="toggleSort('vehicle')">Vehículo <span class="sort-indicator" id="sort-icon-vehicle">↕</span></th>
+                <th class="sortable" onclick="toggleSort('date')">Fecha <span class="sort-indicator" id="sort-icon-date">↕</span></th>
+                <th class="sortable" onclick="toggleSort('services')">Servicios <span class="sort-indicator" id="sort-icon-services">↕</span></th>
+                <th class="sortable" onclick="toggleSort('carreras')">Carreras € <span class="sort-indicator" id="sort-icon-carreras">↕</span></th>
+                <th class="sortable" onclick="toggleSort('kmTotal')">Km Total <span class="sort-indicator" id="sort-icon-kmTotal">↕</span></th>
+                <th class="sortable" onclick="toggleSort('kmOcupado')">Km Ocupado <span class="sort-indicator" id="sort-icon-kmOcupado">↕</span></th>
+                <th style="width:50px;"></th>
+              </tr>
+            </thead>
+            <tbody id="table-body"></tbody>
+          </table>
+        </div>
+      </div>
+    </div>
+  </div>
+
+  <!-- ── VISTA 4: AJUSTES ── -->
+  <div id="view-settings" class="view-container">
+
+    <div class="card">
+      <div class="card-header">
+        <span class="card-title">💾 Copias & Mantenimiento</span>
+      </div>
+      <div class="card-body">
+        <p style="font-size:12.5px;color:var(--muted);line-height:1.6;margin-bottom:14px;">
+          Tus datos se almacenan de forma local. Exporta copias de respaldo regularmente.<br>
+          <span style="color:var(--accent);font-size:11px;">⚠️ El CSV incluye el ticket en base64 (columna «Ticket»). Para importar tickets, usa el CSV exportado previamente.</span>
+        </p>
+        <div class="backup-bar" style="margin-bottom:12px;">
+          <button class="btn btn-green" onclick="exportCSV()">⬇️ Exportar CSV</button>
+          <button class="btn btn-indigo" onclick="importCSV()">⬆️ Importar CSV</button>
+        </div>
+        <button class="btn btn-ghost" style="width:100%;border-color:rgba(244,63,94,0.2);color:#fb7185;font-size:12px;" onclick="clearAllData()">
+          ⚠️ Limpiar base de datos completa
+        </button>
+      </div>
+    </div>
+
+    <div class="card">
+      <div class="card-header">
+        <span class="card-title">🔗 Google Sheets</span>
+      </div>
+      <div class="card-body">
+        <p style="font-size:12.5px;color:var(--muted);line-height:1.6;margin-bottom:12px;">
+          Sincroniza y envía tus turnos a tu hoja de cálculo remota de Google Drive.
+        </p>
+        <div class="sheets-row" style="margin-bottom:12px;">
+          <input type="url" id="sheets-url" placeholder="URL del script de Google Web App..." oninput="saveSheetUrl()">
+        </div>
+        <div style="display:flex;gap:10px;flex-wrap:wrap;align-items:center;">
+          <button class="btn btn-ghost" onclick="testSheetConnection()">🔌 Probar Conexión</button>
+          <button class="btn btn-teal" onclick="pushAllToSheets()">🚀 Subir Datos</button>
+          <div class="sheets-status" id="sheets-status">
+            <span id="sheets-status-text">Inactivo</span>
+          </div>
+        </div>
+      </div>
+    </div>
+
+
+  </div>
+</div>
+
+<!-- MODAL CONFIRMACIÓN -->
+<div id="custom-modal-overlay">
+  <div id="custom-modal">
+    <div class="modal-title" id="custom-modal-title">¿Proceder con la acción?</div>
+    <div class="modal-text" id="custom-modal-text">Esta operación afectará irreversiblemente los registros almacenados.</div>
+    <div class="modal-footer">
+      <button class="btn btn-ghost" id="modal-cancel-btn">Cancelar</button>
+      <button class="btn btn-yellow" id="modal-confirm-btn">Confirmar</button>
+    </div>
+  </div>
+</div>
+
+<!-- MODAL TICKET GRANDE -->
+<div id="ticket-modal-overlay">
+  <button class="ticket-modal-close" onclick="closeTicketModal()">✕</button>
+  <img id="ticket-modal-img" src="" alt="Ticket">
+</div>
+
+<!-- TOAST -->
+<div id="toast"><span id="toast-text"></span></div>
+
+<script>
+/* =========================================================
+   ESTADO
+   ========================================================= */
+let shifts = [];
+let computedShifts = [];
+let rawImage = null;
+let processedBlob = null;
+let pendingTicketB64 = null;   // ← imagen en espera de ser guardada con el turno
+let tesseractReady = false;
+let currentSortCol = 'date';
+let currentSortDir = 'desc';
+
+/* =========================================================
+   INIT
+   ========================================================= */
+window.addEventListener('DOMContentLoaded', () => {
+  try {
+    const saved = localStorage.getItem('taxi_ocr_shifts_v3');
+    if (saved) shifts = JSON.parse(saved);
+    // Migración desde v2 (sin campo ticket)
+    shifts.forEach(s => { if (!('ticket' in s)) s.ticket = ''; });
+  } catch(e){}
+
+  const sheetUrl = localStorage.getItem('taxi_sheets_url');
+  if (sheetUrl) {
+    document.getElementById('sheets-url').value = sheetUrl;
+    setSheetStatus('URL cargada','ok');
+  }
+
+  document.getElementById('threshold-range').addEventListener('input', () => {
+    document.getElementById('threshold-val').textContent =
+      document.getElementById('threshold-range').value;
+  });
+
+  renderTable();
+  loadOCR();
+
+  window.addEventListener('resize', () => {
+    if (document.getElementById('view-dashboard').classList.contains('active')) {
+      renderTrendChart();
+    }
+  });
+});
+
+/* =========================================================
+   NAVEGACIÓN
+   ========================================================= */
+function switchView(viewName) {
+  document.querySelectorAll('.view-container').forEach(v => v.classList.remove('active'));
+  const av = document.getElementById(`view-${viewName}`);
+  if (av) av.classList.add('active');
+
+  document.querySelectorAll('.nav-tab-btn').forEach(t => t.classList.remove('active'));
+  const pt = document.getElementById(`tab-pc-${viewName}`);
+  if (pt) pt.classList.add('active');
+
+  document.querySelectorAll('.mobile-tab-btn').forEach(t => t.classList.remove('active'));
+  const mt = document.getElementById(`tab-mob-${viewName}`);
+  if (mt) mt.classList.add('active');
+
+  if (viewName === 'dashboard') setTimeout(renderTrendChart, 50);
+}
+
+/* =========================================================
+   MODAL GENÉRICO
+   ========================================================= */
+let currentModalConfirmCallback = null;
+
+function showCustomConfirm(title, message, callback, dangerStyle = false) {
+  const overlay = document.getElementById('custom-modal-overlay');
+  document.getElementById('custom-modal-title').textContent = title;
+  document.getElementById('custom-modal-text').textContent = message;
+  const confirmBtn = document.getElementById('modal-confirm-btn');
+  if (dangerStyle) {
+    confirmBtn.style.background = 'var(--rose)';
+    confirmBtn.style.borderColor = 'rgba(244,63,94,0.2)';
+    confirmBtn.textContent = 'Eliminar';
+  } else {
+    confirmBtn.style.background = 'var(--accent)';
+    confirmBtn.style.borderColor = 'transparent';
+    confirmBtn.textContent = 'Confirmar';
+  }
+  currentModalConfirmCallback = callback;
+  overlay.style.display = 'flex';
+}
+
+function closeCustomModal() {
+  document.getElementById('custom-modal-overlay').style.display = 'none';
+  currentModalConfirmCallback = null;
+}
+
+document.getElementById('modal-cancel-btn').addEventListener('click', closeCustomModal);
+document.getElementById('modal-confirm-btn').addEventListener('click', () => {
+  if (currentModalConfirmCallback) currentModalConfirmCallback();
+  closeCustomModal();
+});
+
+/* =========================================================
+   MODAL TICKET (VISOR GRANDE)
+   ========================================================= */
+function openTicketModal(src) {
+  document.getElementById('ticket-modal-img').src = src;
+  document.getElementById('ticket-modal-overlay').classList.add('open');
+}
+
+function closeTicketModal() {
+  document.getElementById('ticket-modal-overlay').classList.remove('open');
+  document.getElementById('ticket-modal-img').src = '';
+}
+
+document.getElementById('ticket-modal-overlay').addEventListener('click', function(e) {
+  if (e.target === this) closeTicketModal();
+});
+
+/* =========================================================
+   OCR LIBRARY
+   ========================================================= */
+function loadOCR(){
+  const script = document.createElement('script');
+  script.src = 'https://unpkg.com/tesseract.js@4.0.1/dist/tesseract.min.js';
+  script.onload = () => {
+    tesseractReady = true;
+    document.getElementById('ocr-dot').className = 'dot green';
+    document.getElementById('ocr-status-label').textContent = 'OCR listo';
+  };
+  script.onerror = () => {
+    document.getElementById('ocr-status-label').textContent = 'Error OCR';
+  };
+  document.head.appendChild(script);
+}
+
+/* =========================================================
+   GESTIÓN DE ARCHIVOS
+   ========================================================= */
+function triggerFileInput() { document.getElementById('file-input').click(); }
+
+function handleFile(input){
+  const file = input.files[0];
+  if (!file) return;
+  const reader = new FileReader();
+  reader.onload = e => {
+    const img = new Image();
+    img.onload = () => {
+      rawImage = img;
+      document.getElementById('contrast-panel').style.display = 'flex';
+      document.getElementById('scan-btn').style.display = 'flex';
+      processCanvas();
+    };
+    img.src = e.target.result;
+  };
+  reader.readAsDataURL(file);
+}
+
+function clearImage(){
+  rawImage = null;
+  processedBlob = null;
+  pendingTicketB64 = null;
+  document.getElementById('preview-container').style.display = 'none';
+  document.getElementById('upload-placeholder').style.display = 'block';
+  document.getElementById('contrast-panel').style.display = 'none';
+  document.getElementById('scan-btn').style.display = 'none';
+  document.getElementById('file-input').value = '';
+  document.getElementById('camera-input').value = '';
+  document.getElementById('ocr-progress').textContent = '';
+}
+
+/* =========================================================
+   CANVAS / PROCESADO
+   ========================================================= */
+function reprocess(){ if (rawImage) processCanvas(); }
+
+function processCanvas(){
+  const canvas = document.getElementById('preview-canvas');
+  const ctx = canvas.getContext('2d');
+  const maxWidth = 1200;
+  let w = rawImage.width, h = rawImage.height;
+  if (w > maxWidth){ h *= maxWidth/w; w = maxWidth; }
+  canvas.width = w; canvas.height = h;
+  ctx.drawImage(rawImage, 0, 0, w, h);
+
+  const useBinarize = document.getElementById('binarize-check').checked;
+  const threshold = parseInt(document.getElementById('threshold-range').value);
+  const imgData = ctx.getImageData(0,0,w,h);
+  const data = imgData.data;
+
+  for(let i=0; i<data.length; i+=4){
+    const avg = (data[i]+data[i+1]+data[i+2])/3;
+    if (useBinarize){
+      const val = avg > threshold ? 255 : 0;
+      data[i]=data[i+1]=data[i+2]=val;
+    } else {
+      let val = ((avg-128)*1.4)+128;
+      val = Math.max(0, Math.min(255, val));
+      data[i]=data[i+1]=data[i+2]=val;
+    }
+  }
+  ctx.putImageData(imgData,0,0);
+
+  // Guardar la imagen original (NO procesada) en base64 para el ticket
+  // Usamos el canvas pero con la imagen sin filtros para mejor calidad visual
+  const origCanvas = document.createElement('canvas');
+  const origCtx = origCanvas.getContext('2d');
+  origCanvas.width = w; origCanvas.height = h;
+  origCtx.drawImage(rawImage, 0, 0, w, h);
+
+  // Comprimir a JPEG calidad 60% para no sobrecargar localStorage
+  pendingTicketB64 = origCanvas.toDataURL('image/jpeg', 0.60);
+
+  canvas.toBlob(blob => { processedBlob = blob; });
+  document.getElementById('preview-container').style.display = 'block';
+  document.getElementById('upload-placeholder').style.display = 'none';
+}
+
+/* =========================================================
+   OCR
+   ========================================================= */
+async function runOCR(){
+  if (!tesseractReady){ toast('El OCR aún se está cargando…','error'); return; }
+  if (!processedBlob){ toast('No hay imagen disponible','error'); return; }
+
+  const btn = document.getElementById('scan-btn');
+  btn.disabled = true;
+  btn.innerHTML = '<span class="spin">⟳</span> Escaneando...';
+  document.getElementById('ocr-progress').textContent = 'Iniciando lectura OCR...';
+
+  try {
+    const result = await Tesseract.recognize(processedBlob, 'spa', {
+      logger: m => {
+        if (m.status){
+          document.getElementById('ocr-progress').textContent =
+            `${m.status === 'recognizing text' ? 'Procesando texto' : m.status} ${Math.round((m.progress||0)*100)}%`;
+        }
+      }
+    });
+    parseOCR(result.data.text);
+    toast('Lectura finalizada con éxito','success');
+  } catch(err){
+    console.error(err);
+    toast('Error en el reconocimiento OCR','error');
+  } finally {
+    btn.disabled = false;
+    btn.innerHTML = '🔍 Procesar con OCR';
+  }
+}
+
+/* =========================================================
+   PARSER
+   ========================================================= */
+function parseOCR(text){
+  const n = text.replace(/,/g,'.').replace(/\s+/g,' ').toLowerCase();
+  const services  = extractNumber(n,[/num\. servicios[^0-9]{0,10}(\d+)/,/servicios[^0-9]{0,10}(\d+)/,/srv[^0-9]{0,10}(\d+)/]);
+  const carreras  = extractNumber(n,[/carreras[^0-9]{0,10}([\d]+[.,]?\d*)/,/importe[^0-9]{0,10}([\d]+[.,]?\d*)/]);
+  const kmTotal   = extractNumber(n,[/dist\.?\s*total[^0-9]{0,10}([\d]+[.,]?\d*)/,/km total[^0-9]{0,10}([\d]+[.,]?\d*)/,/total km[^0-9]{0,10}([\d]+[.,]?\d*)/]);
+  const kmOcupado = extractNumber(n,[/dist\.?\s*ocupado[^0-9]{0,10}([\d]+[.,]?\d*)/,/km ocupado[^0-9]{0,10}([\d]+[.,]?\d*)/,/ocupado[^0-9]{0,10}([\d]+[.,]?\d*)/]);
+
+  document.getElementById('f-date').value = new Date().toISOString().split('T')[0];
+  document.getElementById('f-vehicle').value = '';
+  document.getElementById('f-services').value = services || '';
+  document.getElementById('f-carreras').value = carreras || '';
+  document.getElementById('f-kmtotal').value  = kmTotal  || '';
+  document.getElementById('f-kmocupado').value= kmOcupado|| '';
+  document.getElementById('ocr-form').style.display = 'flex';
+}
+
+function extractNumber(text, patterns){
+  for (const p of patterns){
+    const m = text.match(p);
+    if (m && m[1]) return parseFloat(m[1].replace(',','.'));
+  }
+  return 0;
+}
+
+/* =========================================================
+   GUARDAR TURNO
+   ========================================================= */
+function confirmSave(){
+  const shift = {
+    id: Date.now(),
+    vehicle:   document.getElementById('f-vehicle').value.trim().toUpperCase() || '',
+    date:      document.getElementById('f-date').value,
+    services:  parseFloat(document.getElementById('f-services').value||0),
+    carreras:  parseFloat(document.getElementById('f-carreras').value||0),
+    kmTotal:   parseFloat(document.getElementById('f-kmtotal').value||0),
+    kmOcupado: parseFloat(document.getElementById('f-kmocupado').value||0),
+    ticket:    pendingTicketB64 || ''    // ← imagen del ticket guardada
+  };
+  shifts.push(shift);
+  persist();
+  recompute();
+  renderTable();
+  closeOCRForm();
+  clearImage();
+  toast('Turno guardado correctamente','success');
+  setTimeout(() => switchView('records'), 300);
+}
+
+function closeOCRForm(){
+  document.getElementById('ocr-form').style.display = 'none';
+}
+
+/* =========================================================
+   RECOMPUTE — PRIMER REGISTRO POR VEHÍCULO = BASELINE
+   
+   Lógica:
+   - Los shifts se ordenan por fecha por vehículo.
+   - El PRIMERO de cada vehículo es el "odómetro inicial" (baseline):
+     sus diff son todos 0 → NO contribuye al rendimiento neto.
+   - El SEGUNDO y siguientes calculan diff respecto al anterior.
+   ========================================================= */
+function recompute(){
+  computedShifts = [];
+
+  // Agrupar por vehículo
+  const byVehicle = {};
+  shifts.forEach(s => {
+    const key = s.vehicle || '__sin_vehiculo__';
+    if (!byVehicle[key]) byVehicle[key] = [];
+    byVehicle[key].push(s);
+  });
+
+  Object.values(byVehicle).forEach(group => {
+    // Ordenar cada grupo por fecha ascendente
+    group.sort((a, b) => new Date(a.date) - new Date(b.date));
+
+    group.forEach((curr, i) => {
+      const prev = group[i - 1];
+      const isBaseline = (i === 0);    // ← PRIMER registro del vehículo
+
+      computedShifts.push({
+        ...curr,
+        isBaseline,
+        // Si es baseline, todos los diff son 0 (no suma al rendimiento)
+        diffServices:  isBaseline ? 0 : curr.services  - prev.services,
+        diffCarreras:  isBaseline ? 0 : curr.carreras  - prev.carreras,
+        diffKmTotal:   isBaseline ? 0 : curr.kmTotal   - prev.kmTotal,
+        diffKmOcupado: isBaseline ? 0 : curr.kmOcupado - prev.kmOcupado
+      });
+    });
+  });
+
+  updateStats();
+  updateEfficiencyMetrics();
+  updateVehicleDatalist();
+}
+
+/* =========================================================
+   DATALIST VEHÍCULOS
+   ========================================================= */
+function updateVehicleDatalist(){
+  const dl = document.getElementById('vehicles-datalist');
+  if (!dl) return;
+  dl.innerHTML = '';
+  [...new Set(shifts.map(s => s.vehicle).filter(Boolean))].forEach(v => {
+    const opt = document.createElement('option');
+    opt.value = v;
+    dl.appendChild(opt);
+  });
+}
+
+/* =========================================================
+   ORDENACIÓN
+   ========================================================= */
+function toggleSort(column){
+  if (currentSortCol === column) {
+    currentSortDir = currentSortDir === 'asc' ? 'desc' : 'asc';
+  } else {
+    currentSortCol = column;
+    currentSortDir = 'desc';
+  }
+  renderTable();
+}
+
+function updateSortIcons(){
+  ['vehicle','date','services','carreras','kmTotal','kmOcupado'].forEach(col => {
+    const el = document.getElementById(`sort-icon-${col}`);
+    if (!el) return;
+    if (currentSortCol === col) {
+      el.innerHTML = currentSortDir === 'asc' ? '▲' : '▼';
+      el.style.color = 'var(--accent)'; el.style.opacity = '1';
+    } else {
+      el.innerHTML = '↕'; el.style.color = 'var(--muted)'; el.style.opacity = '0.4';
+    }
+  });
+}
+
+/* =========================================================
+   STATS TOTALES
+   ========================================================= */
+function updateStats(){
+  const t = computedShifts.reduce((acc, s) => {
+    acc.services  += Number(s.diffServices  || 0);
+    acc.carreras  += Number(s.diffCarreras  || 0);
+    acc.kmTotal   += Number(s.diffKmTotal   || 0);
+    acc.kmOcupado += Number(s.diffKmOcupado || 0);
+    return acc;
+  }, {services:0, carreras:0, kmTotal:0, kmOcupado:0});
+
+  document.getElementById('s-services').textContent  = t.services.toFixed(0);
+  document.getElementById('s-carreras').textContent  = t.carreras.toFixed(2);
+  document.getElementById('s-kmtotal').textContent   = t.kmTotal.toFixed(1);
+  document.getElementById('s-kmocupado').textContent = t.kmOcupado.toFixed(1);
+
+  // Mostrar nota explicativa si hay algún baseline
+  const hasBaseline = computedShifts.some(s => s.isBaseline);
+  const note = document.getElementById('baseline-note');
+  if (note) note.style.display = hasBaseline ? 'flex' : 'none';
+}
+
+/* =========================================================
+   KPIs EFICIENCIA
+   ========================================================= */
+function updateEfficiencyMetrics(){
+  let totalKm = 0, totalKmOcupado = 0, totalCarreras = 0, totalServices = 0;
+  computedShifts.forEach(s => {
+    totalKm         += Number(s.diffKmTotal   || 0);
+    totalKmOcupado  += Number(s.diffKmOcupado || 0);
+    totalCarreras   += Number(s.diffCarreras  || 0);
+    totalServices   += Number(s.diffServices  || 0);
+  });
+  document.getElementById('eff-ratio-euro-km').textContent    = totalKm > 0 ? `${(totalCarreras/totalKm).toFixed(2)} €/km` : '—';
+  document.getElementById('eff-occupancy').textContent        = totalKm > 0 ? `${((totalKmOcupado/totalKm)*100).toFixed(1)} %` : '—';
+  document.getElementById('eff-ticket-average').textContent   = totalServices > 0 ? `${(totalCarreras/totalServices).toFixed(2)} €` : '—';
+}
+
+/* =========================================================
+   GRÁFICO SVG TENDENCIA
+   ========================================================= */
+function renderTrendChart(){
+  const chartArea = document.getElementById('chart-area');
+  if (!chartArea) return;
+
+  // Solo shifts NO baseline, ordenados por fecha, últimos 7
+  const lastShifts = [...computedShifts]
+    .filter(s => !s.isBaseline)
+    .sort((a,b) => new Date(a.date) - new Date(b.date))
+    .slice(-7);
+
+  if (lastShifts.length < 2){
+    chartArea.innerHTML = `<div style="height:100%;display:flex;align-items:center;justify-content:center;color:var(--muted);font-size:12px;">Se necesitan al menos 2 registros para mostrar el gráfico.</div>`;
+    return;
+  }
+
+  const width = chartArea.clientWidth || 600;
+  const height = 200;
+  const padding = 24;
+  const gW = width - padding*2;
+  const gH = height - padding*2;
+  const maxE = Math.max(...lastShifts.map(s => Number(s.diffCarreras||0)), 10);
+
+  const points = lastShifts.map((s, i) => {
+    const x = padding + i * (gW/(lastShifts.length-1));
+    const y = padding + gH - ((s.diffCarreras - 0)/(maxE - 0) * gH);
+    return { x, y, val: s.diffCarreras, date: s.date.slice(-5) };
+  });
+
+  let line = `M ${points[0].x} ${points[0].y}`;
+  for (let i=1; i<points.length; i++) line += ` L ${points[i].x} ${points[i].y}`;
+  const area = `${line} L ${points[points.length-1].x} ${height-padding} L ${points[0].x} ${height-padding} Z`;
+
+  chartArea.innerHTML = `
+    <svg width="100%" height="100%" viewBox="0 0 ${width} ${height}" preserveAspectRatio="none" style="overflow:visible;">
+      <defs>
+        <linearGradient id="ag" x1="0" y1="0" x2="0" y2="1">
+          <stop offset="0%" stop-color="var(--accent)" stop-opacity="0.25"/>
+          <stop offset="100%" stop-color="var(--accent)" stop-opacity="0"/>
+        </linearGradient>
+      </defs>
+      <line x1="${padding}" y1="${padding}" x2="${width-padding}" y2="${padding}" stroke="rgba(255,255,255,0.03)" stroke-width="1"/>
+      <line x1="${padding}" y1="${padding+gH/2}" x2="${width-padding}" y2="${padding+gH/2}" stroke="rgba(255,255,255,0.03)" stroke-width="1"/>
+      <line x1="${padding}" y1="${height-padding}" x2="${width-padding}" y2="${height-padding}" stroke="rgba(255,255,255,0.05)" stroke-width="1"/>
+      <path d="${area}" fill="url(#ag)"/>
+      <path d="${line}" fill="none" stroke="var(--accent)" stroke-width="2.5" stroke-linecap="round" stroke-linejoin="round"/>
+      ${points.map(p=>`
+        <circle cx="${p.x}" cy="${p.y}" r="4" fill="var(--bg)" stroke="var(--accent)" stroke-width="2"/>
+        <text x="${p.x}" y="${p.y-8}" font-size="9" fill="var(--text)" font-family="DM Mono" text-anchor="middle" font-weight="700">${p.val.toFixed(0)}€</text>
+        <text x="${p.x}" y="${height-4}" font-size="9" fill="var(--muted)" font-family="DM Mono" text-anchor="middle">${p.date}</text>
+      `).join('')}
+    </svg>`;
+}
+
+/* =========================================================
+   TABLA
+   ========================================================= */
+function renderTable(){
+  recompute();
+  const body = document.getElementById('table-body');
+  const q = document.getElementById('search-input').value.toLowerCase().trim();
+  body.innerHTML = '';
+
+  let filtered = computedShifts.filter(s =>
+    s.vehicle.toLowerCase().includes(q) || s.date.includes(q)
+  );
+
+  filtered.sort((a, b) => {
+    let va = a[currentSortCol], vb = b[currentSortCol];
+    if (currentSortCol === 'date'){ va = new Date(va||0).getTime(); vb = new Date(vb||0).getTime(); }
+    else if (typeof va === 'string'){ va = va.toLowerCase(); vb = vb.toLowerCase(); }
+    if (va < vb) return currentSortDir === 'asc' ? -1 : 1;
+    if (va > vb) return currentSortDir === 'asc' ? 1 : -1;
+    return 0;
+  });
+
+  updateSortIcons();
+
+  if (!filtered.length){
+    body.innerHTML = `<tr><td colspan="8"><div class="empty-state"><div class="empty-title">Sin registros</div><div class="empty-sub">Escanea un ticket o importa un CSV para empezar</div></div></td></tr>`;
+    return;
+  }
+
+  filtered.forEach(s => {
+    const tr = document.createElement('tr');
+    if (s.isBaseline) tr.classList.add('is-baseline');
+
+    // Miniatura del ticket
+    const thumbCell = s.ticket
+      ? `<img class="ticket-thumb" src="${s.ticket}" alt="Ticket" onclick="openTicketModal('${s.ticket}')" title="Ver ticket">`
+      : `<div class="ticket-placeholder" title="Sin ticket">📄</div>`;
+
+    // Diff: si es baseline, mostrar etiqueta especial
+    const diffSrv = s.isBaseline
+      ? `<div class="cell-diff diff-muted">base</div>`
+      : `<div class="cell-diff diff-green">+${s.diffServices}</div>`;
+    const diffCar = s.isBaseline
+      ? `<div class="cell-diff diff-muted">base</div>`
+      : `<div class="cell-diff diff-indigo">+${s.diffCarreras.toFixed(2)}€</div>`;
+    const diffKmt = s.isBaseline
+      ? `<div class="cell-diff diff-muted">base</div>`
+      : `<div class="cell-diff diff-teal">+${s.diffKmTotal.toFixed(1)}</div>`;
+    const diffKmo = s.isBaseline
+      ? `<div class="cell-diff diff-muted">base</div>`
+      : `<div class="cell-diff diff-green">+${s.diffKmOcupado.toFixed(1)}</div>`;
+
+    tr.innerHTML = `
+      <td>${thumbCell}</td>
+      <td><input class="cell-input" style="text-transform:uppercase;" value="${s.vehicle||''}" onchange="editShift(${s.id},'vehicle',this.value)"></td>
+      <td><input type="date" class="cell-input" value="${s.date}" onchange="editShift(${s.id},'date',this.value)"></td>
+      <td><input type="number" class="cell-input" value="${s.services}" onchange="editShift(${s.id},'services',this.value)">${diffSrv}</td>
+      <td><input type="number" step="0.01" class="cell-input" value="${s.carreras}" onchange="editShift(${s.id},'carreras',this.value)">${diffCar}</td>
+      <td><input type="number" step="0.1" class="cell-input" value="${s.kmTotal}" onchange="editShift(${s.id},'kmTotal',this.value)">${diffKmt}</td>
+      <td><input type="number" step="0.1" class="cell-input" value="${s.kmOcupado}" onchange="editShift(${s.id},'kmOcupado',this.value)">${diffKmo}</td>
+      <td><button class="btn btn-rose" onclick="deleteShift(${s.id})">✕</button></td>
+    `;
+    body.appendChild(tr);
+  });
+}
+
+function editShift(id, key, val){
+  const shift = shifts.find(s => s.id === id);
+  if (!shift) return;
+  shift[key] = ['services','carreras','kmTotal','kmOcupado'].includes(key)
+    ? parseFloat(val||0) : val;
+  persist();
+  renderTable();
+}
+
+function deleteShift(id){
+  showCustomConfirm(
+    'Eliminar registro',
+    '¿Seguro que quieres eliminar este registro de turno? No se podrá recuperar.',
+    () => {
+      shifts = shifts.filter(s => s.id !== id);
+      persist();
+      renderTable();
+      toast('Registro eliminado con éxito','success');
+    },
+    true
+  );
+}
+
+/* =========================================================
+   BORRAR TODO
+   ========================================================= */
+function clearAllData(){
+  if (!shifts.length){ toast('No hay datos que limpiar','error'); return; }
+  showCustomConfirm(
+    '⚠️ BORRADO COMPLETO',
+    '¿Estás ABSOLUTAMENTE seguro de borrar todos tus registros? Se perderán para siempre si no has exportado copia.',
+    () => {
+      shifts = [];
+      persist();
+      renderTable();
+      toast('Base de datos restablecida correctamente','success');
+    },
+    true
+  );
+}
+
+/* =========================================================
+   AÑADIR FILA MANUAL
+   ========================================================= */
+function addManualRow(){
+  shifts.push({
+    id: Date.now(), vehicle: '',
+    date: new Date().toISOString().split('T')[0],
+    services:0, carreras:0, kmTotal:0, kmOcupado:0, ticket:''
+  });
+  persist();
+  renderTable();
+}
+
+/* =========================================================
+   PERSISTENCIA
+   ========================================================= */
+function persist(){
+  try {
+    localStorage.setItem('taxi_ocr_shifts_v3', JSON.stringify(shifts));
+  } catch(e) {
+    // localStorage lleno (probable por imágenes grandes) → guardar sin tickets
+    const slim = shifts.map(s => ({...s, ticket:''}));
+    localStorage.setItem('taxi_ocr_shifts_v3', JSON.stringify(slim));
+    toast('Espacio lleno: tickets no guardados localmente. Exporta CSV para conservarlos.','error');
+  }
+}
+
+/* =========================================================
+   EXPORTAR CSV  — incluye columna «Ticket» con base64
+   ========================================================= */
+function exportCSV(){
+  if (!computedShifts.length){ toast('No hay datos para exportar','error'); return; }
+
+  const rows = [['Vehiculo','Fecha','Servicios','Servicios Neto',
+    'Carreras','Carreras Neto','Km Total','Km Total Neto',
+    'Km Ocupado','Km Ocupado Neto','Ticket']];
+
+  computedShifts.forEach(s => {
+    rows.push([
+      s.vehicle, s.date,
+      s.services,  s.diffServices,
+      s.carreras,  s.diffCarreras,
+      s.kmTotal,   s.diffKmTotal,
+      s.kmOcupado, s.diffKmOcupado,
+      s.ticket || ''   // base64 JPEG del ticket
+    ]);
+  });
+
+  const csv = rows.map(r => r.join(';')).join('\n');
+  const blob = new Blob([csv], {type:'text/csv'});
+  const a = document.createElement('a');
+  a.href = URL.createObjectURL(blob);
+  a.download = `taxi_backup_${new Date().toISOString().split('T')[0]}.csv`;
+  a.click();
+  toast('CSV con tickets descargado','success');
+}
+
+/* =========================================================
+   IMPORTAR CSV  — restaura también el campo ticket
+   ========================================================= */
+function importCSV(){
+  const input = document.createElement('input');
+  input.type = 'file'; input.accept = '.csv';
+
+  input.onchange = e => {
+    const file = e.target.files[0];
+    if (!file) return;
+    const reader = new FileReader();
+    reader.onload = ev => {
+      try {
+        const lines = ev.target.result.split('\n').map(l => l.trim()).filter(Boolean);
+        let added = 0, skipped = 0;
+
+        lines.slice(1).forEach(line => {
+          const cols = line.split(';');
+          const vehicle   = (cols[0]||'').trim().toUpperCase();
+          const date      = cols[1]||'';
+          const services  = parseFloat(cols[2]||0);
+          const carreras  = parseFloat(cols[4]||0);
+          const kmTotal   = parseFloat(cols[6]||0);
+          const kmOcupado = parseFloat(cols[8]||0);
+          const ticket    = cols[10]||'';  // base64 del ticket
+
+          if (!date) return;
+          if (shifts.some(s => s.date === date && s.vehicle === vehicle)){ skipped++; return; }
+
+          shifts.push({ id: Date.now()+Math.random(), vehicle, date, services, carreras, kmTotal, kmOcupado, ticket });
+          added++;
+        });
+
+        persist();
+        renderTable();
+        toast(`Importados ${added} registros${skipped ? `. ${skipped} duplicados ignorados`:''}`, 'success');
+      } catch(err){
+        console.error(err);
+        toast('Error al procesar el CSV','error');
+      }
+    };
+    reader.readAsText(file, 'UTF-8');
+  };
+  input.click();
+}
+
+/* =========================================================
+   GOOGLE SHEETS
+   ========================================================= */
+function saveSheetUrl(){
+  localStorage.setItem('taxi_sheets_url', document.getElementById('sheets-url').value);
+}
+
+async function testSheetConnection(){
+  const url = document.getElementById('sheets-url').value;
+  if (!url){ setSheetStatus('Sin URL','err'); return; }
+  try {
+    const r = await fetch(url, {method:'POST', body:JSON.stringify({test:true})});
+    if (r.ok){ setSheetStatus('Conectado','ok'); toast('Sheets conectado con éxito','success'); }
+    else throw new Error();
+  } catch(e){ setSheetStatus('Error de conexión','err'); toast('No se pudo establecer conexión','error'); }
+}
+
+async function pushAllToSheets(){
+  const url = document.getElementById('sheets-url').value;
+  if (!url){ toast('Configura primero la URL de Apps Script','error'); return; }
+  try {
+    for (const s of computedShifts) await pushShift(url, s);
+    toast('Enviado correctamente a Google Sheets','success');
+  } catch(e){ toast('Error al enviar datos','error'); }
+}
+
+async function pushShift(url, s){
+  // No enviamos el base64 del ticket a Sheets para no saturar la petición
+  const { ticket, ...data } = s;
+  await fetch(url, {method:'POST', headers:{'Content-Type':'application/json'}, body:JSON.stringify(data)});
+}
+
+function setSheetStatus(text, type){
+  document.getElementById('sheets-status').className = `sheets-status ${type}`;
+  document.getElementById('sheets-status-text').textContent = text;
+}
+
+/* =========================================================
+   TOAST
+   ========================================================= */
+function toast(msg, type='success'){
+  const t = document.getElementById('toast');
+  t.className = `${type} show`;
+  document.getElementById('toast-text').textContent = msg;
+  setTimeout(() => t.classList.remove('show'), 2800);
+}
+
+/* =========================================================
+   SERVICE WORKER — registro para modo app offline
+   ========================================================= */
+if ('serviceWorker' in navigator) {
+  window.addEventListener('load', () => {
+    navigator.serviceWorker.register('./sw.js')
+      .then(reg => {
+        console.log('SW registrado:', reg.scope);
+        document.getElementById('offline-badge').style.display = 'flex';
+      })
+      .catch(err => console.log('SW no disponible (preview local):', err));
+  });
+}
+</script>
+</body>
+</html>
