@@ -1,27 +1,23 @@
 {
-  "name": "Taxi OCR Analytics Pro",
-  "short_name": "Taxi OCR",
-  "description": "Control de turnos y kilómetros con OCR",
-  "start_url": "/Tx/index.html",
-  "scope": "/Tx/",
+  "name": "Taxi OCR",
+  "short_name": "TaxiOCR",
+  "description": "Analítica de turnos de taxi y control de kilómetros",
+  "start_url": "./index.html",
   "display": "standalone",
-  "background_color": "#06080b",
   "theme_color": "#000000",
-  "orientation": "portrait-primary",
+  "background_color": "#06080b",
   "icons": [
     {
-      "src": "/Tx/icon-192.png",
+      "src": "icon-192.png",
       "sizes": "192x192",
       "type": "image/png",
-      "purpose": "any"
+      "purpose": "any maskable"
     },
     {
-      "src": "/Tx/icon-512.png",
+      "src": "icon-512.png",
       "sizes": "512x512",
       "type": "image/png",
       "purpose": "any maskable"
     }
-  ],
-  "categories": ["productivity", "utilities"],
-  "lang": "es"
+  ]
 }
